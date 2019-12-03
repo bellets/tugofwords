@@ -1,0 +1,17 @@
+body {
+	background-color: #C7EEDA;
+}
+
+#container {
+	background-color: #FFC2AF;
+	width: 800px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+#header {
+	background-color: #65BC8F;
+	color: white;
+	text-align: center;
+}
+
