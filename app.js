@@ -14,8 +14,12 @@
 
 'use strict';
 
-const process = require('process'); // Required to mock environment variables
+// used to ssh into Compute Engine
+var path, node_ssh, ssh, fs
 
+const process = require('process'); // Required to mock environment variables
+node_ssh = require('node-ssh')
+ssh = new node_ssh()
 
 // [START gae_storage_app]
 const {format} = require('util');
@@ -74,11 +78,28 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
 
   blobStream.on('finish', () => {
     // The public URL can be used to directly access the file via HTTP.
+    // https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav
     const publicUrl = format(
       `https://storage.googleapis.com/${bucket.name}/${blob.name}`
     );
     res.status(200).send(publicUrl);
-    res.render('form.pug');	  
+    // res.render('form.pug');	  
+  });
+
+  ssh.connect({
+    host: '35.232.123.204',
+    username: 'vagrant',
+    privateKey: 'auth/vagrant'
+  })
+  // Execute a series of commands on the DiViMe VM, and eventually we'll fetch the results.
+  .then(function() { 
+    ssh.execCommand('mkdir -p /vagrant/data/new_files'
+        + '&& wget -P /vagrant/data/new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
+        + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files'
+        + '&& /home/vagrant/launcher/diartk.sh data/new_files/ opensmileSad').then(function(result) {
+        console.log('STDOUT: ' + result.stdout)
+        console.log('STDERR: ' + result.stderr)
+    })
   });
 
   blobStream.end(req.file.buffer);
