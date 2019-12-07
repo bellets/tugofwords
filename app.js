@@ -15,7 +15,7 @@
 'use strict';
 
 // used to ssh into Compute Engine
-var path, node_ssh, ssh, fs
+var path, node_ssh, ssh
 
 const process = require('process'); // Required to mock environment variables
 process.env.GCLOUD_STORAGE_BUCKET = 'tugbucket1234';
@@ -28,6 +28,7 @@ const {format} = require('util');
 const express = require('express');
 const Multer = require('multer');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 
 // By default, the client will authenticate using the service account file
 // specified by the GOOGLE_APPLICATION_CREDENTIALS environment variable and use
@@ -41,6 +42,7 @@ const storage = new Storage();
 
 const app = express();
 app.set('view engine', 'pug');
+// app.set("views", path.join(__dirname, "views"));
 app.use(bodyParser.json());
 
 // Multer is required to process file uploads and make them available via
@@ -84,8 +86,7 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
     const publicUrl = format(
       `https://storage.googleapis.com/${bucket.name}/${blob.name}`
     );
-    // res.status(200).send(publicUrl);
-    // res.render('form.pug');	  
+
 
     ssh.connect({
       host: '35.232.123.204',
@@ -95,29 +96,35 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
     // Execute a series of commands on the DiViMe VM, and eventually we'll fetch the results.
     .then(function() { 
 
-      const cmd = 'mkdir -p /vagrant/data/new_new_files'
-      + '&& wget -P /vagrant/data/new_new_files ' 
+      console.log('ssh connected to DiViMe');
+
+      const cmd = 'rm -rf /vagrant/data/new_files'
+      + '&& mkdir -p /vagrant/data/new_files'
+      + '&& wget -P /vagrant/data/new_files ' 
       + `https://storage.googleapis.com/${bucket.name}/${blob.name}`
-      + '&& /home/vagrant/launcher/opensmileSad.sh data/new_new_files'
-      + '&& /home/vagrant/launcher/diartk.sh data/new_new_files/ opensmileSad'
-      + '&& python rttm_stats.py'
+      + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files'
+      + '&& /home/vagrant/launcher/diartk.sh data/new_files/ opensmileSad'
+      + '&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files/diartk_opensmileSad_TOW-toy-data.rttm /vagrant/data/new_files/stats.json'
 
       ssh.execCommand(cmd).then(function(result) {
           // + '&& wget -P /vagrant/data/new_new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
           console.log('STDOUT: ' + result.stdout)
           console.log('STDERR: ' + result.stderr)
 
-          ssh.getFile('public/test.rttm', '/vagrant/data/new_new_files/opensmileSad_TOW-toy-data.rttm').then(function(Contents) {
+          ssh.getFile('public/stats.json', '/vagrant/data/new_files/stats.json').then(function(Contents) {
             console.log("The File's contents were successfully downloaded")
+            var contents = fs.readFileSync("public/stats.json");
+            // keys: conversation_turns, turn_rate, recording_length, speech_content
+            var jsonContent = JSON.parse(contents);
+            res.render('analytics', { numTurns:jsonContent.conversation_turns });
+            // res.render('analytics.pug', { num_turns=jsonContent.num_turns } );
+            // res.render('analytics.pug');
           }, function(error) {
             console.log("Something's wrong")
             console.log(error)
+            res.render('error.pug');
           })
           
-          var contents = fs.readFileSync("public/stats.json");
-          var jsonContent = JSON.parse(contents);
-          res.render('analytics.pug', num_turns=jsonContent.num_turns);
-
       })
 
     });
