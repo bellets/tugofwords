@@ -18,6 +18,8 @@
 var path, node_ssh, ssh, fs
 
 const process = require('process'); // Required to mock environment variables
+process.env.GCLOUD_STORAGE_BUCKET = 'tugbucket1234';
+
 node_ssh = require('node-ssh')
 ssh = new node_ssh()
 
@@ -82,24 +84,44 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
     const publicUrl = format(
       `https://storage.googleapis.com/${bucket.name}/${blob.name}`
     );
-    res.status(200).send(publicUrl);
+    // res.status(200).send(publicUrl);
     // res.render('form.pug');	  
-  });
 
-  ssh.connect({
-    host: '35.232.123.204',
-    username: 'vagrant',
-    privateKey: 'auth/vagrant'
-  })
-  // Execute a series of commands on the DiViMe VM, and eventually we'll fetch the results.
-  .then(function() { 
-    ssh.execCommand('mkdir -p /vagrant/data/new_files'
-        + '&& wget -P /vagrant/data/new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
-        + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files'
-        + '&& /home/vagrant/launcher/diartk.sh data/new_files/ opensmileSad').then(function(result) {
-        console.log('STDOUT: ' + result.stdout)
-        console.log('STDERR: ' + result.stderr)
+    ssh.connect({
+      host: '35.232.123.204',
+      username: 'vagrant',
+      privateKey: 'auth/vagrant'
     })
+    // Execute a series of commands on the DiViMe VM, and eventually we'll fetch the results.
+    .then(function() { 
+
+      const cmd = 'mkdir -p /vagrant/data/new_new_files'
+      + '&& wget -P /vagrant/data/new_new_files ' 
+      + `https://storage.googleapis.com/${bucket.name}/${blob.name}`
+      + '&& /home/vagrant/launcher/opensmileSad.sh data/new_new_files'
+      + '&& /home/vagrant/launcher/diartk.sh data/new_new_files/ opensmileSad'
+      + '&& python rttm_stats.py'
+
+      ssh.execCommand(cmd).then(function(result) {
+          // + '&& wget -P /vagrant/data/new_new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
+          console.log('STDOUT: ' + result.stdout)
+          console.log('STDERR: ' + result.stderr)
+
+          ssh.getFile('public/test.rttm', '/vagrant/data/new_new_files/opensmileSad_TOW-toy-data.rttm').then(function(Contents) {
+            console.log("The File's contents were successfully downloaded")
+          }, function(error) {
+            console.log("Something's wrong")
+            console.log(error)
+          })
+          
+          var contents = fs.readFileSync("public/stats.json");
+          var jsonContent = JSON.parse(contents);
+          res.render('analytics.pug', num_turns=jsonContent.num_turns);
+
+      })
+
+    });
+
   });
 
   blobStream.end(req.file.buffer);
