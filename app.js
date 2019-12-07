@@ -113,10 +113,9 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
 
           ssh.getFile('public/stats.json', '/vagrant/data/new_files/stats.json').then(function(Contents) {
             console.log("The File's contents were successfully downloaded")
-            var contents = fs.readFileSync("public/stats.json");
             // keys: conversation_turns, turn_rate, recording_length, speech_content
-            var jsonContent = JSON.parse(contents);
-            res.render('analytics', { numTurns:jsonContent.conversation_turns });
+            let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
+            res.render('analytics.pug', jsonContent);
             // res.render('analytics.pug', { num_turns=jsonContent.num_turns } );
             // res.render('analytics.pug');
           }, function(error) {
