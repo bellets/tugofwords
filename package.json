@@ -15,6 +15,7 @@
     "express": "^4.17.1",
     "multer": "^1.4.1",
     "node-ssh": "^6.0.0",
+    "os-tmpdir": "^2.0.0",
     "pug": "^2.0.4",
     "pug-cli": "^1.0.0-alpha6",
     "server": "^1.0.21"
