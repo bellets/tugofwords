@@ -62,6 +62,11 @@ app.get('/', (req, res) => {
   res.render('form.pug');
 });
 
+app.get('/analytics-test', (req, res) => {
+  let jsonContent = JSON.parse(fs.readFileSync("public/stats-test.json"));
+  res.render('analytics.pug', jsonContent);
+});
+
 // Process the file upload and upload to Google Cloud Storage.
 app.post('/upload', multer.single('file'), (req, res, next) => {
   if (!req.file) {
