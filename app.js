@@ -45,6 +45,7 @@ const app = express();
 app.set('view engine', 'pug');
 // app.set("views", path.join(__dirname, "views"));
 app.use(bodyParser.json());
+app.use(express.static('public'))
 
 // Multer is required to process file uploads and make them available via
 // req.files.
