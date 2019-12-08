@@ -126,7 +126,7 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
           }, function(error) {
             console.log("Something's wrong")
             console.log(error)
-            res.render('error.pug');
+            res.status(500).send('error in processing');
           })
 
       })
