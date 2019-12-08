@@ -26,6 +26,7 @@ style.
   .bgimg-1 {
   background-image: url('https://www.ourfamilywizard.ca/sites/default/files/styles/scale_width_960/public/media/image/2019-03/renewed-contact-blog.jpg?itok=DMMxB3E9');
   min-height: 100%;
+  height: 100%;
   }
   /* Second image (Analytics) */
   .bgimg-2 {
@@ -55,6 +56,8 @@ style.
 
   #loading {
     display: none;  
+    height: 100%;
+    min-height: 100%;
   }
 
   .loader {
@@ -63,7 +66,8 @@ style.
     border-radius: 50%;
     width: 120px;
     height: 120px;
-    animation: spin 2s linear infinite;
+    margin: 0 auto;
+    animation: spin 4s linear infinite;
   } 
 
   @keyframes spin {
@@ -106,6 +110,8 @@ style.
     h3.w3-center
 #loading.w3-content.w3-container.w3-center.w3-padding-64
   .loader
+  br
+  span Please wait while your audio file is processed.
 
 // Container (About Section)
 #about.w3-content.w3-container.w3-padding-64
@@ -244,6 +250,9 @@ script.
     $('#submit').on('click', function(e){
         console.log('clickaroo')
         $('#loading').show()
+        $('html, body').animate({
+          scrollTop: ($('#loading').offset().top)
+        },500);
     });
   });
 

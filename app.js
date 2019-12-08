@@ -29,6 +29,7 @@ const express = require('express');
 const Multer = require('multer');
 const bodyParser = require('body-parser');
 const fs = require('fs');
+var os = require('os');
 
 // By default, the client will authenticate using the service account file
 // specified by the GOOGLE_APPLICATION_CREDENTIALS environment variable and use
@@ -116,10 +117,11 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
           console.log('STDOUT: ' + result.stdout)
           console.log('STDERR: ' + result.stderr)
 
-          ssh.getFile('public/stats.json', '/vagrant/data/new_files/stats.json').then(function(Contents) {
+          ssh.getFile(`${os.tmpdir()}/stats.json`, '/vagrant/data/new_files/stats.json').then(function(Contents) {
             console.log("The File's contents were successfully downloaded")
             // keys: conversation_turns, turn_rate, recording_length, speech_content
-            let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
+            // let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
+            let jsonContent = JSON.parse(fs.readFileSync(`${os.tmpdir()}/stats.json`));
             res.render('analytics.pug', jsonContent);
             // res.render('analytics.pug', { num_turns=jsonContent.num_turns } );
             // res.render('analytics.pug');
