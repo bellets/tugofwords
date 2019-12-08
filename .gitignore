@@ -1,3 +1,6 @@
 .gitignore
 node_modules
 auth
+.env
+.DS_Store
+public/.DS_Store
