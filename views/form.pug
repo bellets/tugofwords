@@ -113,10 +113,6 @@ style.
       input(type='file' name='file')
       input(type='submit' id='submit')
     h3.w3-center
-#loading.w3-content.w3-container.w3-center.w3-padding-64
-  .loader
-  br
-  span Please wait while your audio file is processed.
 
 // Container (About Section)
 #about.w3-content.w3-container.w3-padding-64
@@ -169,15 +165,14 @@ style.
     br
     |  Meetings
 // Second Parallax Image with Portfolio Text
-.bgimg-2.w3-display-container.w3-opacity-min
+#analytics.bgimg-2.w3-display-container.w3-opacity-min
   .w3-display-middle
     span.w3-xxlarge.w3-text-white.w3-wide ANALYTICS
 // Container (Portfolio Section)
-#analytics.w3-content.w3-container.w3-padding-64
-  h3.w3-center  RESULTS
-  p.w3-center
-    em Here is the processed audio. 
+#loading.w3-content.w3-container.w3-center.w3-padding-64
+  .loader
   br
+  span Please wait while your audio file is processed.
 // Third Parallax Image with Portfolio Text
 .bgimg-3.w3-display-container.w3-opacity-min
   .w3-display-middle
@@ -256,7 +251,7 @@ script.
         console.log('clickaroo')
         $('#loading').show()
         $('html, body').animate({
-          scrollTop: ($('#loading').offset().top)
+          scrollTop: ($('#analytics').offset().top)
         },500);
     });
   });
