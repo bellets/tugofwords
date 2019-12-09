@@ -45,13 +45,14 @@ const app = express();
 app.set('view engine', 'pug');
 // app.set("views", path.join(__dirname, "views"));
 app.use(bodyParser.json());
+app.use(express.static('public'))
 
 // Multer is required to process file uploads and make them available via
 // req.files.
 const multer = Multer({
   storage: Multer.memoryStorage(),
   limits: {
-    fileSize: 30 * 1024 * 1024, // no larger than 30mb, you can change as needed.
+    fileSize: 7 * 1024 * 1024 * 1024, // no larger than 30mb, you can change as needed.
   },
 });
 
