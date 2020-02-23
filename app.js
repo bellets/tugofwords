@@ -29,6 +29,7 @@ const express = require('express');
 const Multer = require('multer');
 const bodyParser = require('body-parser');
 const fs = require('fs');
+var os = require('os');
 
 // By default, the client will authenticate using the service account file
 // specified by the GOOGLE_APPLICATION_CREDENTIALS environment variable and use
@@ -44,14 +45,20 @@ const app = express();
 app.set('view engine', 'pug');
 // app.set("views", path.join(__dirname, "views"));
 app.use(bodyParser.json());
+app.use(express.static('public'))
+var limits = { fileSize: 5 * 1024 * 1024 * 1024 };
 
 // Multer is required to process file uploads and make them available via
 // req.files.
 const multer = Multer({
-  storage: Multer.memoryStorage(),
-  limits: {
-    fileSize: 30 * 1024 * 1024, // no larger than 30mb, you can change as needed.
-  },
+  // storage: Multer.memoryStorage(),
+  dest: ''
+  /* limits: {
+    fileSize: 5 * 1024 * 1024 * 1024, // no larger than 30mb, you can change as needed.
+  }, */
+/*   filename: function (req, file, cb) {
+    cb(null, file.fieldname + '-' + Date.now())
+  } */
 });
 
 // A bucket is a container for objects (files).
@@ -73,7 +80,6 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
     res.status(400).send('No file uploaded.');
     return;
   }
-
 
   // Create a new blob in the bucket and upload the file data.
   const blob = bucket.file(req.file.originalname);
@@ -109,17 +115,18 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
       + `https://storage.googleapis.com/${bucket.name}/${blob.name}`
       + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files'
       + '&& /home/vagrant/launcher/diartk.sh data/new_files/ opensmileSad'
-      + '&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files/diartk_opensmileSad_TOW-toy-data.rttm /vagrant/data/new_files/stats.json'
+      + `&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files/diartk_opensmileSad_${blob.name.slice(0, blob.name.length - 4)}.rttm /vagrant/data/new_files/stats.json`
 
       ssh.execCommand(cmd).then(function(result) {
           // + '&& wget -P /vagrant/data/new_new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
           console.log('STDOUT: ' + result.stdout)
           console.log('STDERR: ' + result.stderr)
 
-          ssh.getFile('public/stats.json', '/vagrant/data/new_files/stats.json').then(function(Contents) {
+          ssh.getFile(`${os.tmpdir()}/stats.json`, '/vagrant/data/new_files/stats.json').then(function(Contents) {
             console.log("The File's contents were successfully downloaded")
             // keys: conversation_turns, turn_rate, recording_length, speech_content
-            let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
+            // let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
+            let jsonContent = JSON.parse(fs.readFileSync(`${os.tmpdir()}/stats.json`));
             res.render('analytics.pug', jsonContent);
             // res.render('analytics.pug', { num_turns=jsonContent.num_turns } );
             // res.render('analytics.pug');
@@ -128,7 +135,7 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
             console.log(error)
             res.status(500).send('error in processing');
           })
-          
+
       })
 
     });
