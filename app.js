@@ -46,14 +46,19 @@ app.set('view engine', 'pug');
 // app.set("views", path.join(__dirname, "views"));
 app.use(bodyParser.json());
 app.use(express.static('public'))
+var limits = { fileSize: 5 * 1024 * 1024 * 1024 };
 
 // Multer is required to process file uploads and make them available via
 // req.files.
 const multer = Multer({
-  storage: Multer.memoryStorage(),
-  limits: {
-    fileSize: 7 * 1024 * 1024 * 1024, // no larger than 30mb, you can change as needed.
-  },
+  // storage: Multer.memoryStorage(),
+  dest: ''
+  /* limits: {
+    fileSize: 5 * 1024 * 1024 * 1024, // no larger than 30mb, you can change as needed.
+  }, */
+/*   filename: function (req, file, cb) {
+    cb(null, file.fieldname + '-' + Date.now())
+  } */
 });
 
 // A bucket is a container for objects (files).
@@ -75,7 +80,6 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
     res.status(400).send('No file uploaded.');
     return;
   }
-
 
   // Create a new blob in the bucket and upload the file data.
   const blob = bucket.file(req.file.originalname);
