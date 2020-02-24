@@ -105,20 +105,23 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
 
       console.log('ssh connected to DiViMe');
 
-      const cmd = 'rm -rf /vagrant/data/new_files'
-      + '&& mkdir -p /vagrant/data/new_files'
-      + '&& wget -P /vagrant/data/new_files ' 
-      + `https://storage.googleapis.com/${bucket.name}/${blob.name}`
-      + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files'
-      + '&& /home/vagrant/launcher/diartk.sh data/new_files/ opensmileSad'
-      + `&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files/diartk_opensmileSad_${blob.name.slice(0, blob.name.length - 4)}.rttm /vagrant/data/new_files/stats.json`
+      const randomid = Math.random().toString(36).slice(2);
+
+      const cmd = 'mkdir -p /vagrant/data/new_files_' + randomid
+      + '&& wget -P /vagrant/data/new_files_' + randomid
+      + ` https://storage.googleapis.com/${bucket.name}/${blob.name}`
+      + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files_' + randomid
+      + '&& /home/vagrant/launcher/diartk.sh data/new_files_' + randomid + '/ opensmileSad'
+      + '&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files_' + randomid + `/diartk_opensmileSad_${blob.name.slice(0, blob.name.length - 4)}.rttm /vagrant/data/new_files_` + randomid + '/stats.json'
+      + '&& rm /vagrant/data/new_files_' + randomid + `/${blob.name}`
+//'rm -rf /vagrant/data/new_files' + randomid
 
       ssh.execCommand(cmd).then(function(result) {
           // + '&& wget -P /vagrant/data/new_new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
           console.log('STDOUT: ' + result.stdout)
           console.log('STDERR: ' + result.stderr)
 
-          ssh.getFile(`${os.tmpdir()}/stats.json`, '/vagrant/data/new_files/stats.json').then(function(Contents) {
+          ssh.getFile(`${os.tmpdir()}/stats.json`, ('/vagrant/data/new_files_' + randomid + '/stats.json')).then(function(Contents) {
             console.log("The File's contents were successfully downloaded")
             // keys: conversation_turns, turn_rate, recording_length, speech_content
             // let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
