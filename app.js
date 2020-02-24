@@ -113,9 +113,10 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
       + '&& mkdir -p /vagrant/data/new_files'
       + '&& wget -P /vagrant/data/new_files ' 
       + `https://storage.googleapis.com/${bucket.name}/${blob.name}`
+      + `&& sudo unzip ${blob.name}`
       + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files'
       + '&& /home/vagrant/launcher/diartk.sh data/new_files/ opensmileSad'
-      + `&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files/diartk_opensmileSad_${blob.name.slice(0, blob.name.length - 4)}.rttm /vagrant/data/new_files/stats.json`
+      + `&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files/diartk_opensmileSad_${blob.name.slice(0, blob.name.length - 8)}.rttm /vagrant/data/new_files/stats.json`
 
       ssh.execCommand(cmd).then(function(result) {
           // + '&& wget -P /vagrant/data/new_new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'

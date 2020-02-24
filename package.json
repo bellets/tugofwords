@@ -21,7 +21,8 @@
     "os-tmpdir": "^2.0.0",
     "pug": "^2.0.4",
     "pug-cli": "^1.0.0-alpha6",
-    "server": "^1.0.21"
+    "server": "^1.0.21",
+    "unzipper": "^0.10.9"
   },
   "devDependencies": {
     "@google-cloud/nodejs-repo-tools": "^3.3.0",
