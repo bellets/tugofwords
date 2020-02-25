@@ -14,14 +14,10 @@
 
 'use strict';
 
-// used to ssh into Compute Engine
-var path, node_ssh, ssh
 
 const process = require('process'); // Required to mock environment variables
 process.env.GCLOUD_STORAGE_BUCKET = 'tugbucket1234';
 
-node_ssh = require('node-ssh')
-ssh = new node_ssh()
 
 // [START gae_storage_app]
 const {format} = require('util');
@@ -29,6 +25,9 @@ const express = require('express');
 const Multer = require('multer');
 const bodyParser = require('body-parser');
 const fs = require('fs');
+const path = require('path');
+// const { exec } = require('child_process');
+var exec = require('child-process-promise').exec;
 var os = require('os');
 
 // By default, the client will authenticate using the service account file
@@ -70,7 +69,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/analytics-test', (req, res) => {
-  let jsonContent = JSON.parse(fs.readFileSync("public/stats-test.json"));
+  let jsonContent = JSON.parse(fs.readFileSync(`/vagrant/data/BN31_020108a_9m7vgk4t8pf/stats.json`));
   res.render('analytics.pug', jsonContent);
 });
 
@@ -98,51 +97,23 @@ app.post('/upload', multer.single('file'), (req, res, next) => {
       `https://storage.googleapis.com/${bucket.name}/${blob.name}`
     );
 
-
-    ssh.connect({
-      host: '35.232.123.204',
-      username: 'vagrant',
-      privateKey: 'auth/vagrant'
-    })
-    // Execute a series of commands on the DiViMe VM, and eventually we'll fetch the results.
-    .then(function() { 
-
-      console.log('ssh connected to DiViMe');
-
-      const randomid = Math.random().toString(36).slice(2);
-
-      const cmd = 'mkdir -p /vagrant/data/new_files_' + randomid
-      + '&& wget -P /vagrant/data/new_files_' + randomid
-      + ` https://storage.googleapis.com/${bucket.name}/${blob.name}`
-      + `&& sudo unzip ${blob.name}`
-      + '&& /home/vagrant/launcher/opensmileSad.sh data/new_files_' + randomid
-      + '&& /home/vagrant/launcher/diartk.sh data/new_files_' + randomid + '/ opensmileSad'
-      + '&& python /vagrant/utils_custom/rttm_converter.py /vagrant/data/new_files_' + randomid + `/diartk_opensmileSad_${blob.name.slice(0, blob.name.length - 8)}.rttm /vagrant/data/new_files_` + randomid + '/stats.json'
-      + '&& rm /vagrant/data/new_files_' + randomid + `/${blob.name}`
-//'rm -rf /vagrant/data/new_files' + randomid
-
-      ssh.execCommand(cmd).then(function(result) {
-          // + '&& wget -P /vagrant/data/new_new_files https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav'
-          console.log('STDOUT: ' + result.stdout)
-          console.log('STDERR: ' + result.stderr)
-
-          ssh.getFile(`${os.tmpdir()}/stats.json`, ('/vagrant/data/new_files_' + randomid + '/stats.json')).then(function(Contents) {
-            console.log("The File's contents were successfully downloaded")
-            // keys: conversation_turns, turn_rate, recording_length, speech_content
-            // let jsonContent = JSON.parse(fs.readFileSync("public/stats.json"));
-            let jsonContent = JSON.parse(fs.readFileSync(`${os.tmpdir()}/stats.json`));
-            res.render('analytics.pug', jsonContent);
-            // res.render('analytics.pug', { num_turns=jsonContent.num_turns } );
-            // res.render('analytics.pug');
-          }, function(error) {
-            console.log("Something's wrong")
-            console.log(error)
-            res.status(500).send('error in processing');
-          })
-
+    const randomid = Math.random().toString(36).slice(2);
+    const rec_name = blob.name.split('.')[0];
+    // const rec_name = blob.name.split('.').slice(0, -1).join('.'); 
+    console.log(`recording name: ${rec_name}`)
+    const datadir = `${rec_name}_${randomid}`;
+    console.log(`/vagrant/utils_custom/process_file.sh ${datadir} ${blob.name}`)
+    exec(`/vagrant/utils_custom/process_file.sh ${datadir} ${blob.name}`)
+      .then(function (result) {
+        console.log(`stdout: ${result.stdout}`);
+        console.log(`stderr: ${result.stdout}`);
+        let jsonContent = JSON.parse(fs.readFileSync(`/vagrant/data/${datadir}/stats.json`));
+        res.render('analytics.pug', jsonContent);
       })
-
-    });
+      .catch(function (err) {
+        console.error('ERROR: ', err);
+        res.send('Failure in processing file: file likely too large or of the incorrect file type. WAV and ZIP are accepted. ');
+      });
 
   });
 
