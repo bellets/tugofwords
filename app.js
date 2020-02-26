@@ -14,7 +14,6 @@
 
 'use strict';
 
-
 const process = require('process'); // Required to mock environment variables
 process.env.GCLOUD_STORAGE_BUCKET = 'tugbucket1234';
 
@@ -29,6 +28,15 @@ const path = require('path');
 // const { exec } = require('child_process');
 var exec = require('child-process-promise').exec;
 var os = require('os');
+const dotenv = require('dotenv').config();
+
+var createError = require('http-errors');
+var logger = require('morgan');
+var session = require('express-session');
+var okta = require("@okta/okta-sdk-nodejs");
+var ExpressOIDC = require("@okta/oidc-middleware").ExpressOIDC;
+
+
 
 // By default, the client will authenticate using the service account file
 // specified by the GOOGLE_APPLICATION_CREDENTIALS environment variable and use
@@ -41,10 +49,83 @@ const {Storage} = require('@google-cloud/storage');
 const storage = new Storage();
 
 const app = express();
+
+
+app.use(session({
+  secret: 'jdkjfkdjflskjdflkajsdflkjslkdjf',
+  resave: true,
+  saveUninitialized: false
+}));
+
+var oktaClient = new okta.Client({
+  orgUrl: 'https://dev-414945.okta.com',
+  token: process.env.OKTA_CLIENT_TOKEN
+});
+
+const oidc = new ExpressOIDC({
+  issuer: "https://dev-414945.okta.com/oauth2/default",
+  client_id: process.env.OKTA_CLIENT_ID,
+  client_secret: process.env.OKTA_CLIENT_SECRET,
+  redirect_uri: 'http://localhost:8080/users/callback',
+  appBaseUrl: "http://localhost:8080",
+  scope: "openid profile",
+  routes: {
+    login: {
+      path: "/users/login"
+    },
+    callback: {
+      path: "/users/callback",
+      defaultRedirect: "/dashboard"
+    }
+  }
+});
+
+app.use((req, res, next) => {
+  if (!req.userinfo) {
+    console
+    return next();
+  }
+
+  oktaClient.getUser(req.userinfo.sub)
+    .then(user => {
+      req.user = user;
+      res.locals.user = user;
+      next();
+    }).catch(err => {
+      next(err);
+    });
+});
+
+
+app.get('/test', (req, res) => {
+  res.json({ profile: req.user ? req.user.profile : null });
+});
+
+
+app.use(oidc.router);
+
 app.set('view engine', 'pug');
-// app.set("views", path.join(__dirname, "views"));
 app.use(bodyParser.json());
-app.use(express.static('public'))
+app.use(express.static('public'));
+
+
+function loginRequired(req, res, next) {
+  if (!req.user) {
+    res.redirect("/users/login");
+  }
+
+  next();
+}
+
+const dashboardRouter = require("./routes/dashboard");
+const publicRouter = require("./routes/public");
+const usersRouter = require("./routes/users");
+
+app.use('/', publicRouter);
+app.use('/dashboard', loginRequired, dashboardRouter);
+app.use('/users', usersRouter);
+
+
 var limits = { fileSize: 5 * 1024 * 1024 * 1024 };
 
 // Multer is required to process file uploads and make them available via
@@ -61,70 +142,69 @@ const multer = Multer({
 });
 
 // A bucket is a container for objects (files).
-const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
+// const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
 
-// Display a form for uploading files.
-app.get('/', (req, res) => {
-  res.render('form.pug');
-});
 
-app.get('/analytics-test', (req, res) => {
-  let jsonContent = JSON.parse(fs.readFileSync(`/vagrant/data/BN31_020108a_9m7vgk4t8pf/stats.json`));
-  res.render('analytics.pug', jsonContent);
-});
+// app.get('/analytics-test', (req, res) => {
+//   let jsonContent = JSON.parse(fs.readFileSync(`/vagrant/data/BN31_020108a_9m7vgk4t8pf/stats.json`));
+//   res.render('analytics.pug', jsonContent);
+// });
 
 // Process the file upload and upload to Google Cloud Storage.
-app.post('/upload', multer.single('file'), (req, res, next) => {
-  if (!req.file) {
-    res.status(400).send('No file uploaded.');
-    return;
-  }
+// app.post('/upload', multer.single('file'), (req, res, next) => {
+//   if (!req.file) {
+//     res.status(400).send('No file uploaded.');
+//     return;
+//   }
 
-  // Create a new blob in the bucket and upload the file data.
-  const blob = bucket.file(req.file.originalname);
-  const blobStream = blob.createWriteStream({
-    resumable: false,
-  });
+//   // Create a new blob in the bucket and upload the file data.
+//   const blob = bucket.file(req.file.originalname);
+//   const blobStream = blob.createWriteStream({
+//     resumable: false,
+//   });
 
-  blobStream.on('error', err => {
-    next(err);
-  });
+//   blobStream.on('error', err => {
+//     next(err);
+//   });
 
-  blobStream.on('finish', () => {
-    // The public URL can be used to directly access the file via HTTP.
-    // https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav
-    const publicUrl = format(
-      `https://storage.googleapis.com/${bucket.name}/${blob.name}`
-    );
+//   blobStream.on('finish', () => {
+//     // The public URL can be used to directly access the file via HTTP.
+//     // https://storage.googleapis.com/tugbucket1234/TOW-toy-data.wav
+//     const publicUrl = format(
+//       `https://storage.googleapis.com/${bucket.name}/${blob.name}`
+//     );
 
-    const randomid = Math.random().toString(36).slice(2);
-    const rec_name = blob.name.split('.')[0];
-    // const rec_name = blob.name.split('.').slice(0, -1).join('.'); 
-    console.log(`recording name: ${rec_name}`)
-    const datadir = `${rec_name}_${randomid}`;
-    console.log(`/vagrant/utils_custom/process_file.sh ${datadir} ${blob.name}`)
-    exec(`/vagrant/utils_custom/process_file.sh ${datadir} ${blob.name}`)
-      .then(function (result) {
-        console.log(`stdout: ${result.stdout}`);
-        console.log(`stderr: ${result.stdout}`);
-        let jsonContent = JSON.parse(fs.readFileSync(`/vagrant/data/${datadir}/stats.json`));
-        res.render('analytics.pug', jsonContent);
-      })
-      .catch(function (err) {
-        console.error('ERROR: ', err);
-        res.send('Failure in processing file: file likely too large or of the incorrect file type. WAV and ZIP are accepted. ');
-      });
+//     const randomid = Math.random().toString(36).slice(2);
+//     const rec_name = blob.name.split('.')[0];
+//     // const rec_name = blob.name.split('.').slice(0, -1).join('.'); 
+//     console.log(`recording name: ${rec_name}`)
+//     const datadir = `${rec_name}_${randomid}`;
+//     console.log(`/vagrant/utils_custom/process_file.sh ${datadir} ${blob.name}`)
+//     exec(`/vagrant/utils_custom/process_file.sh ${datadir} ${blob.name}`)
+//       .then(function (result) {
+//         console.log(`stdout: ${result.stdout}`);
+//         console.log(`stderr: ${result.stdout}`);
+//         let jsonContent = JSON.parse(fs.readFileSync(`/vagrant/data/${datadir}/stats.json`));
+//         res.render('analytics.pug', jsonContent);
+//       })
+//       .catch(function (err) {
+//         console.error('ERROR: ', err);
+//         res.send('Failure in processing file: file likely too large or of the incorrect file type. WAV and ZIP are accepted. ');
+//       });
 
-  });
+//   });
 
-  blobStream.end(req.file.buffer);
-});
+//   blobStream.end(req.file.buffer);
+// });
+
+
+// [END gae_storage_app]
+
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
   console.log('Press Ctrl+C to quit.');
 });
-// [END gae_storage_app]
 
 module.exports = app;

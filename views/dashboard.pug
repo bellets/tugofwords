@@ -107,6 +107,7 @@ style.
     br
     br
     h3.w3-center
+      p | Welcome to your dashboard page, #{user.profile.firstName}.
       font(color='black')
         | Upload your audio file for processing here, then jump to Analytics for your results.
     form(method='POST' action='/upload' enctype='multipart/form-data')
